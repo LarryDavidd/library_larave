@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Book extends Model
 {
-    protected $table = 'Books';
+    protected $table = 'books';
     protected $primaryKey = 'id';
     protected $fillable = ['title', 'description', 'image_path'];
     
@@ -29,15 +29,15 @@ class Book extends Model
     public function scopeSearch(Builder $query, ?string $title = null, array $authorIds = [], array $genreIds = [])
     {
         return $query->select([
-                'Books.id',
-                'Books.title',
-                'Books.description',
-                'Books.image_path'
+                'books.id',
+                'books.title',
+                'books.description',
+                'books.image_path'
             ])
             ->when($title, function(Builder $query, string $title) {
                 return $query->where(function($q) use ($title) {
-                    $q->where('Books.title', 'LIKE', "%{$title}%")
-                      ->orWhere('Books.description', 'LIKE', "%{$title}%");
+                    $q->where('books.title', 'LIKE', "%{$title}%")
+                      ->orWhere('books.description', 'LIKE', "%{$title}%");
                 });
             })
             ->when($authorIds, function(Builder $query, array $authorIds) {
