@@ -26,9 +26,9 @@ class Book extends Model
         return $this->belongsToMany(Genre::class, 'book_genre', 'book_id', 'genre_id');
     }
 
-    public function scopeSearch(Builder $query, ?string $title = null, array $authorIds = [], array $genreIds = [])
+    public function scopeSearch(Builder $query, ?string $title = null, array $authorIds = [], array $genreIds = [], int $perPage = 15)
     {
-        return $query->select([
+        $results = $query->select([
                 'books.id',
                 'books.title',
                 'books.description',
@@ -37,28 +37,40 @@ class Book extends Model
             ->when($title, function(Builder $query, string $title) {
                 return $query->where(function($q) use ($title) {
                     $q->where('books.title', 'LIKE', "%{$title}%")
-                      ->orWhere('books.description', 'LIKE', "%{$title}%");
+                    ->orWhere('books.description', 'LIKE', "%{$title}%");
                 });
             })
             ->when($authorIds, function(Builder $query, array $authorIds) {
                 return $query->whereHas('authors', function($q) use ($authorIds) {
-                    $q->whereIn('Authors.id', $authorIds);
+                    $q->whereIn('authors.id', $authorIds);
                 });
             })
             ->when($genreIds, function(Builder $query, array $genreIds) {
                 return $query->whereHas('genres', function($q) use ($genreIds) {
-                    $q->whereIn('Genres.id', $genreIds);
+                    $q->whereIn('genres.id', $genreIds);
                 });
             })
             ->with(['authors' => function($query) {
-                $query->selectRaw("CONCAT(authors.last_name, ' ', authors.first_name, 
-                                 IFNULL(CONCAT(' ', authors.middle_name), '') as full_name")
-                     ->orderBy('last_name')
-                     ->orderBy('first_name');
+                $query->select('authors.id', 'authors.first_name', 'authors.last_name', 'authors.middle_name')
+                    ->orderBy('last_name')
+                    ->orderBy('first_name');
             }])
             ->with(['genres' => function($query) {
                 $query->orderBy('name');
             }])
-            ->orderBy('title');
+            ->orderBy('title')
+            ->paginate($perPage);
+
+        return [
+            'data' => $results->items(),
+            'pagination' => [
+                'total' => $results->total(),
+                'per_page' => $results->perPage(),
+                'current_page' => $results->currentPage(),
+                'last_page' => $results->lastPage(),
+                'from' => $results->firstItem(),
+                'to' => $results->lastItem(),
+            ]
+        ];
     }
 }

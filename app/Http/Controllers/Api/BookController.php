@@ -20,24 +20,29 @@ class BookController extends Controller
             'authors' => 'nullable|array',
             'authors.*' => 'integer|exists:authors,id',
             'genres' => 'nullable|array',
-            'genres.*' => 'integer|exists:genres,id'
+            'genres.*' => 'integer|exists:genres,id',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1'
         ]);
 
-        $books = Book::when($validated['title'] ?? null, function($q, $title) {
-                return $q->where('title', 'like', "%$title%");
-            })
-            ->when($validated['authors'] ?? null, function($q, $authors) {
-                return $q->whereHas('authors', fn($q) => $q->whereIn('id', $authors));
-            })
-            ->when($validated['genres'] ?? null, function($q, $genres) {
-                return $q->whereHas('genres', fn($q) => $q->whereIn('id', $genres));
-            })
-            ->with(['authors', 'genres'])
-            ->get();
+        $perPage = $validated['per_page'] ?? 15;
+        $page = $validated['page'] ?? 1;
+
+        $result = Book::query()
+            ->search(
+                $validated['title'] ?? null,
+                $validated['authors'] ?? [],
+                $validated['genres'] ?? [],
+                $perPage
+            );
+
+
+        $result['pagination']['current_page'] = $page;
 
         return response()->json([
             'success' => true,
-            'data' => $books
+            'data' => $result['data'],
+            'meta' => $result['pagination']
         ]);
     }
 }
